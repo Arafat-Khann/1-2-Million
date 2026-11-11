@@ -28,7 +28,7 @@ export async function scanLeaf(imageSource) {
 
     const ranked = Array.from(values).map((score, index) => ({ className: classNames[index] || `Class ${index + 1}`, score })).sort((a, b) => b.score - a.score).slice(0, 3)
     const top = ranked[0]
-    if (!top || top.score < 0.7) return { clear: false, results: ranked, message: 'Could not assess this photo. Try a clearer photo with one leaf in good light.' }
+    if (!top || top.score < 0.65) return { clear: false, results: ranked, message: 'Could not assess this photo. Try a clearer photo with one leaf in good light.' }
     return { clear: true, results: ranked, message: confidenceLabel(top.score) }
   } catch (error) {
     console.error('Leaf screening failed.', error)
@@ -37,8 +37,8 @@ export async function scanLeaf(imageSource) {
 }
 
 function confidenceLabel(score) {
-  if (score >= 0.8) return 'Highest-ranked result (80%+ model score)'
-  if (score >= 0.75) return 'Very likely top-ranked result'
+  if (score >= 0.78) return 'Highest-ranked result (78%+ model score)'
+  if (score >= 0.72) return 'Very likely top-ranked result'
   return 'Likely top-ranked result'
 }
 
