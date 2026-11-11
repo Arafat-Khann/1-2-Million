@@ -17,7 +17,8 @@ export async function scanLeaf(imageSource) {
   try {
     const { model, classNames } = await loadModel()
     const image = await loadImage(imageSource)
-    const input = tf.tidy(() => tf.browser.fromPixels(image).resizeBilinear([224, 224]).toFloat().div(127.5).sub(1).expandDims(0))
+    const resizedCanvas = resizeImageToModelInput(image)
+    const input = tf.tidy(() => tf.browser.fromPixels(resizedCanvas).toFloat().div(127.5).sub(1).expandDims(0))
     const prediction = model.predict(input)
     const probabilities = Array.isArray(prediction) ? prediction[0] : prediction
     const values = await probabilities.data()
@@ -34,6 +35,16 @@ export async function scanLeaf(imageSource) {
     console.error('Leaf screening failed.', error)
     return { clear: false, results: [], message: 'Could not assess this photo. Try again with a clearer image.' }
   }
+}
+
+function resizeImageToModelInput(image) {
+  const canvas = document.createElement('canvas')
+  canvas.width = 224
+  canvas.height = 224
+  const context = canvas.getContext('2d')
+  if (!context) throw new Error('This browser cannot prepare the image for screening.')
+  context.drawImage(image, 0, 0, 224, 224)
+  return canvas
 }
 
 function confidenceLabel(score) {
