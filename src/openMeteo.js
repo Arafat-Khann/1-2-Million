@@ -47,7 +47,6 @@ function weatherLabel(code) {
   if ([45, 48].includes(code)) return 'Fog possible'
   if ([51, 53, 55, 56, 57].includes(code)) return 'Drizzle possible'
   if ([61, 63, 65, 66, 67, 80, 81, 82].includes(code)) return 'Rain possible'
-  if ([71, 73, 75, 77, 85, 86].includes(code)) return 'Snow possible'
   if ([95, 96, 99].includes(code)) return 'Thunderstorm possible'
   return 'Conditions unavailable'
 }
