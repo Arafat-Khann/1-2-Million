@@ -1,4 +1,14 @@
 const endpoint = 'https://api.open-meteo.com/v1/forecast'
+const geocodingEndpoint = 'https://geocoding-api.open-meteo.com/v1/search'
+
+export async function findLocation(village, district) {
+  const query = [village, district].filter(Boolean).join(', ')
+  const response = await fetch(`${geocodingEndpoint}?${new URLSearchParams({ name: query, count: '5', language: 'en', format: 'json' })}`)
+  if (!response.ok) throw new Error(`Location search returned ${response.status}.`)
+  const data = await response.json()
+  if (!data.results?.length) throw new Error('No matching location found. Check the village and district spelling.')
+  return data.results[0]
+}
 
 export async function getOpenMeteoWeather(farm) {
   const params = new URLSearchParams({

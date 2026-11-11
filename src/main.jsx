@@ -11,7 +11,7 @@ import { ScanTab } from './tabs/Scan'
 import { AboutTab } from './tabs/About'
 
 const emptyPlot = () => ({ id: crypto.randomUUID(), crop: 'tomato', variety: '', sowingDate: '', stage: 'seedling', areaAcres: '', updatedAt: '' })
-const emptyFarm = () => ({ id: crypto.randomUUID(), name: '', cityLabel: '', village: '', district: '', latitude: '', longitude: '', locationConsent: false, locationMode: 'manual', updatedAt: '', plots: [emptyPlot()] })
+const emptyFarm = () => ({ id: crypto.randomUUID(), name: '', cityLabel: '', village: '', district: '', latitude: '', longitude: '', locationConsent: false, locationMode: 'manual', snowFree: false, updatedAt: '', plots: [emptyPlot()] })
 
 function localStore() {
   try {
@@ -27,7 +27,7 @@ async function loadProfiles(userId) {
   const { data, error } = await client.from('farms').select('*, crop_plots(*)').eq('user_id', userId).order('created_at')
   if (error) throw error
   if (!data.length) return localStore()
-  const farms = data.map((farm) => ({ ...farm, cityLabel: farm.location_label, locationMode: farm.location_consent ? 'precise' : 'manual', plots: (farm.crop_plots || []).map((plot) => ({ ...plot, sowingDate: plot.sowing_date, areaAcres: plot.area_acres, stage: plot.growth_stage })) }))
+  const farms = data.map((farm) => ({ ...farm, cityLabel: farm.location_label, locationMode: farm.location_consent ? 'precise' : 'manual', snowFree: farm.snow_free ?? false, plots: (farm.crop_plots || []).map((plot) => ({ ...plot, sowingDate: plot.sowing_date, areaAcres: plot.area_acres, stage: plot.growth_stage })) }))
   const firstPlot = farms[0].plots[0]
   return { farms, activeFarmId: farms[0].id, activePlotId: firstPlot?.id }
 }
@@ -62,14 +62,18 @@ function App() {
 
   async function saveProfile(nextFarm, nextPlot) {
     const now = new Date().toISOString()
-    const farmRow = { id: nextFarm.id, user_id: user.id, name: nextFarm.name, village: nextFarm.village, district: nextFarm.district, location_label: nextFarm.cityLabel, latitude: nextFarm.latitude || null, longitude: nextFarm.longitude || null, location_consent: nextFarm.locationConsent, location_consent_at: nextFarm.locationConsent ? now : null }
+    const farmRow = { id: nextFarm.id, user_id: user.id, name: nextFarm.name, village: nextFarm.village, district: nextFarm.district, location_label: nextFarm.cityLabel, latitude: nextFarm.latitude || null, longitude: nextFarm.longitude || null, location_consent: nextFarm.locationConsent, location_consent_at: nextFarm.locationConsent ? now : null, snow_free: nextFarm.snowFree }
     const plotRow = { id: nextPlot.id, farm_id: nextFarm.id, crop: nextPlot.crop, variety: nextPlot.variety || null, sowing_date: nextPlot.sowingDate, growth_stage: nextPlot.stage, area_acres: nextPlot.areaAcres }
     const { error: saveError } = await supabase.from('farms').upsert(farmRow).select().single()
     if (!saveError) {
       const { error: plotError } = await supabase.from('crop_plots').upsert(plotRow)
       if (plotError) { setError(plotError.message); return }
     } else { setError(saveError.message); return }
-    setStore((current) => ({ ...current, farms: current.farms.map((farm) => farm.id === nextFarm.id ? { ...nextFarm, updatedAt: now, plots: farm.plots.map((plot) => plot.id === nextPlot.id ? { ...nextPlot, updatedAt: now } : plot) } : farm) }))
+    setStore((current) => {
+      const savedFarm = { ...nextFarm, updatedAt: now, plots: [{ ...nextPlot, updatedAt: now }] }
+      const farmExists = current.farms.some((farm) => farm.id === nextFarm.id)
+      return { ...current, farms: farmExists ? current.farms.map((farm) => farm.id === nextFarm.id ? { ...farm, ...savedFarm, plots: farm.plots.some((plot) => plot.id === nextPlot.id) ? farm.plots.map((plot) => plot.id === nextPlot.id ? { ...nextPlot, updatedAt: now } : plot) : [...farm.plots, { ...nextPlot, updatedAt: now }] } : farm) : [...current.farms, savedFarm] }
+    })
     setSaved(true)
     window.setTimeout(() => setSaved(false), 2500)
   }
