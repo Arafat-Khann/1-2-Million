@@ -3,4 +3,4 @@ dist/
 .env
 .env.*
 !.env.example
-cropguard_model/
+/cropguard_model/
