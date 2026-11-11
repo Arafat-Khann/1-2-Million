@@ -29,11 +29,17 @@ export async function scanLeaf(imageSource) {
     const ranked = Array.from(values).map((score, index) => ({ className: classNames[index] || `Class ${index + 1}`, score })).sort((a, b) => b.score - a.score).slice(0, 3)
     const top = ranked[0]
     if (!top || top.score < 0.7) return { clear: false, results: ranked, message: 'Could not assess this photo. Try a clearer photo with one leaf in good light.' }
-    return { clear: true, results: ranked, message: top.score >= 0.8 ? 'Most likely' : 'Likely' }
+    return { clear: true, results: ranked, message: confidenceLabel(top.score) }
   } catch (error) {
     console.error('Leaf screening failed.', error)
     return { clear: false, results: [], message: 'Could not assess this photo. Try again with a clearer image.' }
   }
+}
+
+function confidenceLabel(score) {
+  if (score >= 0.8) return 'Highest-ranked result (80%+ model score)'
+  if (score >= 0.75) return 'Very likely top-ranked result'
+  return 'Likely top-ranked result'
 }
 
 function loadImage(source) {
