@@ -1,4 +1,46 @@
-// Temporary local mock. Replace this file with the leaf model teammate's module.
-export async function scanLeaf() {
-  return { clear: false, results: [], message: 'Leaf model is not connected yet.' }
+import * as tf from '@tensorflow/tfjs'
+
+let modelPromise
+let classNamesPromise
+
+async function loadModel() {
+  modelPromise ||= tf.loadLayersModel('/cropguard_model/web_model/model.json')
+  classNamesPromise ||= fetch('/cropguard_model/class_names.json').then((response) => {
+    if (!response.ok) throw new Error('Leaf class names could not be loaded.')
+    return response.json()
+  })
+  const [model, classNames] = await Promise.all([modelPromise, classNamesPromise])
+  return { model, classNames }
+}
+
+export async function scanLeaf(imageSource) {
+  try {
+    const { model, classNames } = await loadModel()
+    const image = await loadImage(imageSource)
+    const input = tf.tidy(() => tf.browser.fromPixels(image).resizeBilinear([224, 224]).toFloat().div(127.5).sub(1).expandDims(0))
+    const prediction = model.predict(input)
+    const probabilities = Array.isArray(prediction) ? prediction[0] : prediction
+    const values = await probabilities.data()
+    input.dispose()
+    if (Array.isArray(prediction)) prediction.forEach((tensor) => tensor.dispose())
+    else prediction.dispose()
+    image.close?.()
+
+    const ranked = Array.from(values).map((score, index) => ({ className: classNames[index] || `Class ${index + 1}`, score })).sort((a, b) => b.score - a.score).slice(0, 3)
+    const top = ranked[0]
+    if (!top || top.score < 0.7) return { clear: false, results: ranked, message: 'Could not assess this photo. Try a clearer photo with one leaf in good light.' }
+    return { clear: true, results: ranked, message: top.score >= 0.8 ? 'Most likely' : 'Likely' }
+  } catch (error) {
+    console.error('Leaf screening failed.', error)
+    return { clear: false, results: [], message: 'Could not assess this photo. Try again with a clearer image.' }
+  }
+}
+
+function loadImage(source) {
+  return new Promise((resolve, reject) => {
+    const image = new Image()
+    image.onload = () => resolve(image)
+    image.onerror = () => reject(new Error('The selected image could not be read.'))
+    image.src = source
+  })
 }
