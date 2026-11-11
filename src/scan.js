@@ -43,7 +43,10 @@ function resizeImageToModelInput(image) {
   canvas.height = 224
   const context = canvas.getContext('2d')
   if (!context) throw new Error('This browser cannot prepare the image for screening.')
-  context.drawImage(image, 0, 0, 224, 224)
+  const sourceSize = Math.min(image.naturalWidth || image.width, image.naturalHeight || image.height)
+  const sourceX = ((image.naturalWidth || image.width) - sourceSize) / 2
+  const sourceY = ((image.naturalHeight || image.height) - sourceSize) / 2
+  context.drawImage(image, sourceX, sourceY, sourceSize, sourceSize, 0, 0, 224, 224)
   return canvas
 }
 
