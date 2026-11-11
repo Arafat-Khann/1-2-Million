@@ -28,7 +28,7 @@ export async function scanLeaf(imageSource) {
 
     const ranked = Array.from(values).map((score, index) => ({ className: classNames[index] || `Class ${index + 1}`, score })).sort((a, b) => b.score - a.score).slice(0, 3)
     const top = ranked[0]
-    if (!top || top.score < 0.65) return { clear: false, results: ranked, message: 'Could not assess this photo. Try a clearer photo with one leaf in good light.' }
+    if (!top || top.score < 0.65) return { clear: false, results: ranked, message: 'Could not assess any disease. Try a clearer photo with one leaf in good light.' }
     return { clear: true, results: ranked, message: confidenceLabel(top.score) }
   } catch (error) {
     console.error('Leaf screening failed.', error)
