@@ -8,7 +8,7 @@ function isStale(timestamp) {
   return !timestamp || (Date.now() - new Date(timestamp).getTime()) > staleAfterDays * 86400000
 }
 
-export function FarmTab({ farm, plot, farms, onSelect, onSave, onAddFarm, onAddPlot, saved }) {
+export function FarmTab({ farm, plot, farms, onSelect, onSave, onDeleteFarm, onAddFarm, onAddPlot, saved }) {
   const [locationMode, setLocationMode] = useState(farm?.locationMode || 'manual')
   const [coordinates, setCoordinates] = useState({ latitude: farm?.latitude || '', longitude: farm?.longitude || '' })
   const [locationSearch, setLocationSearch] = useState({ loading: false, error: '', result: '' })
@@ -63,6 +63,7 @@ export function FarmTab({ farm, plot, farms, onSelect, onSave, onAddFarm, onAddP
       <div className="card-title-row"><div><p className="eyebrow">SAVED PROFILES</p><h2>Choose a farm and plot</h2></div><span className="section-icon leaf">✦</span></div>
       <div className="form-grid"><label>Selected farm<select value={farm.id} onChange={(event) => { const selected = farms.find((item) => item.id === event.target.value); if (selected) onSelect(selected.id, selected.plots[0]?.id) }}>{farms.map((item) => <option value={item.id} key={item.id}>{item.name || 'New farm (not saved)'}</option>)}</select></label><label>Selected crop plot<select value={plot.id} onChange={(event) => onSelect(farm.id, event.target.value)}>{farm.plots.map((item, index) => <option value={item.id} key={item.id}>{cropLabels[item.crop]} plot {index + 1}</option>)}</select></label></div>
       <div className="button-row"><button className="secondary-button" type="button" onClick={() => { setLocationMode('manual'); setCoordinates({ latitude: '', longitude: '' }); onAddFarm() }}>＋ Add another farm</button><button className="secondary-button" type="button" onClick={onAddPlot}>＋ Add crop plot</button></div>
+      <button className="danger-button" type="button" onClick={() => onDeleteFarm(farm.id)}>Delete this farm and its plots</button>
     </div>
     <div className="card">
       <div className="card-intro"><span className="section-icon leaf">✦</span><div><h2>{farm.name || 'Farm details'}</h2><p>Farm details and crop information stay on this device.</p></div></div>

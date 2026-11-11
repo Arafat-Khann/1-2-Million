@@ -77,6 +77,18 @@ function App() {
     setSaved(true)
     window.setTimeout(() => setSaved(false), 2500)
   }
+  async function deleteFarm(farmId) {
+    const farmToDelete = store.farms.find((farm) => farm.id === farmId)
+    if (!farmToDelete || !window.confirm(`Delete "${farmToDelete.name || 'this farm'}" and all its crop plots? This cannot be undone.`)) return
+    const { error: deleteError } = await supabase.from('farms').delete().eq('id', farmId).eq('user_id', user.id)
+    if (deleteError) { setError(deleteError.message); return }
+    setStore((current) => {
+      const farms = current.farms.filter((farm) => farm.id !== farmId)
+      if (farms.length) return { ...current, farms, activeFarmId: farms[0].id, activePlotId: farms[0].plots[0]?.id }
+      const farm = emptyFarm()
+      return { farms: [farm], activeFarmId: farm.id, activePlotId: farm.plots[0].id }
+    })
+  }
 
   if (!supabase) return <div className="notice error-state config-error"><span>!</span><p>Supabase is not configured. Add the Vercel environment variables <code>VITE_SUPABASE_URL</code> and <code>VITE_SUPABASE_ANON_KEY</code>.</p></div>
   if (loading) return <div className="card loading">Checking your account…</div>
@@ -92,7 +104,7 @@ function App() {
   function updateSelection(farmId, plotId) { setStore((current) => ({ ...current, activeFarmId: farmId, activePlotId: plotId })) }
   function addFarm() { const farm = emptyFarm(); setStore((current) => ({ ...current, farms: [...current.farms, farm], activeFarmId: farm.id, activePlotId: farm.plots[0].id })) }
   function addPlot() { const plot = emptyPlot(); setStore((current) => ({ ...current, farms: current.farms.map((farm) => farm.id === activeFarm.id ? { ...farm, plots: [...farm.plots, plot] } : farm), activePlotId: plot.id })) }
-  const content = { farm: <FarmTab farm={activeFarm} plot={activePlot} farms={store.farms} onSelect={updateSelection} onSave={saveProfile} onAddFarm={addFarm} onAddPlot={addPlot} saved={saved} />, warnings: <WarningsTab farm={profile} hasFarm={hasWeather} />, water: <WaterTab farm={profile} hasFarm={hasPlot} />, scan: <ScanTab farm={profile} hasFarm={hasPlot} />, about: <AboutTab /> }[activeTab]
+  const content = { farm: <FarmTab farm={activeFarm} plot={activePlot} farms={store.farms} onSelect={updateSelection} onSave={saveProfile} onDeleteFarm={deleteFarm} onAddFarm={addFarm} onAddPlot={addPlot} saved={saved} />, warnings: <WarningsTab farm={profile} hasFarm={hasWeather} />, water: <WaterTab farm={profile} hasFarm={hasPlot} />, scan: <ScanTab farm={profile} hasFarm={hasPlot} />, about: <AboutTab /> }[activeTab]
   return <div className="app-shell"><header className="topbar"><div className="brand"><img src="/Logo.png" alt="KisanSense logo" /><div><strong>KisanSense</strong><span>Clearer decisions for your farm</span></div></div><button className="device-pill" onClick={() => supabase.auth.signOut()}>Log out</button></header><main className="main-content"><div className="page-heading"><div><p className="eyebrow">SMALL FARM SUPPORT</p><h1>{tabs.find((tab) => tab.id === activeTab).label}</h1></div>{profile && hasPlot && <span className="farm-chip">● {profile.crop} · {profile.cityLabel}</span>}</div>{!hasPlot && activeTab !== 'farm' && <div className="notice info"><span className="notice-icon">i</span><p>Save a complete crop plot first to personalise this section.</p><button onClick={() => setActiveTab('farm')}>Set up plot</button></div>}{activeTab === 'warnings' && hasPlot && !hasWeather && <div className="notice amber"><span className="notice-icon">!</span><p>Precise location permission is needed for weather.</p></div>}{content}</main><nav className="bottom-nav" aria-label="Main navigation">{tabs.map((tab) => <button className={activeTab === tab.id ? 'active' : ''} key={tab.id} onClick={() => setActiveTab(tab.id)}><span className="nav-icon">{tab.icon}</span><span>{tab.label}</span></button>)}</nav></div>
 }
 
