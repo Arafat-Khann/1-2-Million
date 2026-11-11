@@ -3,6 +3,7 @@ import { createRoot } from 'react-dom/client'
 import './styles.css'
 import { supabase } from './supabase'
 import { AuthTab } from './tabs/Auth'
+import { ResetPasswordTab } from './tabs/ResetPassword'
 import { FarmTab } from './tabs/Farm'
 import { WarningsTab } from './tabs/Warnings'
 import { WaterTab } from './tabs/Water'
@@ -40,11 +41,15 @@ function App() {
   const [saved, setSaved] = useState(false)
   const [loading, setLoading] = useState(Boolean(supabase))
   const [error, setError] = useState('')
+  const [recovery, setRecovery] = useState(false)
 
   useEffect(() => {
     if (!supabase) return undefined
     supabase.auth.getSession().then(({ data }) => setUser(data.session?.user || null))
-    const { data: listener } = supabase.auth.onAuthStateChange((_event, session) => setUser(session?.user || null))
+    const { data: listener } = supabase.auth.onAuthStateChange((event, session) => {
+      setRecovery(event === 'PASSWORD_RECOVERY')
+      setUser(session?.user || null)
+    })
     return () => listener.subscription.unsubscribe()
   }, [])
 
@@ -72,6 +77,7 @@ function App() {
   if (!supabase) return <div className="notice error-state config-error"><span>!</span><p>Supabase is not configured. Add the Vercel environment variables <code>VITE_SUPABASE_URL</code> and <code>VITE_SUPABASE_ANON_KEY</code>.</p></div>
   if (loading) return <div className="card loading">Checking your account…</div>
   if (!user) return <AuthTab />
+  if (recovery) return <ResetPasswordTab onComplete={() => setRecovery(false)} />
   if (error) return <div className="notice error-state config-error"><span>!</span><p>{error}</p><button onClick={() => setError('')}>Continue</button></div>
 
   const activeFarm = store.farms.find((farm) => farm.id === store.activeFarmId) || store.farms[0]
